@@ -13,7 +13,8 @@ FLASH_MODELS = os.getenv("GEMINI_FLASH_MODELS",
                          "aistudio/gemini-3.5-flash-lite,aistudio/gemini-3.1-flash-lite,asia-south1/gemini-3.5-flash").split(",")
 JUDGE_MODELS = os.getenv("GEMINI_JUDGE_MODELS",
                          "aistudio/gemini-3.5-flash-lite,aistudio/gemini-3.1-flash-lite,asia-south1/gemini-3.5-flash").split(",")
-EMBED_SOURCES = os.getenv("EMBED_SOURCES", "asia-south1,aistudio").split(",")  # embeddings work on Vertex today
+# Same model either way, so stored vectors stay comparable. Vertex refuses ~2 in 3 calls on a free trial.
+EMBED_SOURCES = os.getenv("EMBED_SOURCES", "aistudio,asia-south1").split(",")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "gemini-embedding-001")
 EMBED_DIM = 768
 GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "25000"))
