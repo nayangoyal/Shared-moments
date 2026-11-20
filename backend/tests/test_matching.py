@@ -68,3 +68,21 @@ def test_scrub_removes_contact_details():
 def test_cosine():
     assert round(cosine([1, 0], [1, 0]), 3) == 1.0
     assert cosine(None, [1]) == 0.0
+
+
+def test_demo_identity_detection():
+    from app.store import is_demo_identity
+    assert is_demo_identity({"about_raw": {"name": "Rahul Sharma", "nick": "Golu"}})
+    assert not is_demo_identity({"about_raw": {"name": "Nayan Goyal", "nick": ""}})
+    assert not is_demo_identity({})
+
+
+def test_nayan_and_manav_match_both_ways_with_their_own_details():
+    nayan_about = fallback_person({"name": "Nayan Goyal", "school": "Army Public School", "year": "2012", "area": "Nasirabad"})
+    manav_about = fallback_person({"name": "Manav Sharma", "school": "Army Public School", "year": "2012", "area": "Nasirabad"})
+    nayan_looks = fallback_person({"name": "Manav", "school": "Army Public School", "year": "2012", "area": "Nasirabad"})
+    manav_looks = fallback_person({"name": "Nayan", "school": "Army Public School", "year": "2012", "area": "Nasirabad"})
+    p1, w1 = score_person(nayan_looks, manav_about)
+    p2, w2 = score_person(manav_looks, nayan_about)
+    assert fits(p1, w1, 4) and fits(p2, w2, 4)
+    assert {"name", "school", "year", "area"} <= set(w1)

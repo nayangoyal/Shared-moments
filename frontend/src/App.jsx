@@ -9,6 +9,7 @@ import { useStore } from './store/StoreContext'
 import AboutScreen from './screens/AboutScreen'
 import FoundTab from './screens/FoundTab'
 import MeetScreen from './screens/MeetScreen'
+import ProfileScreen from './screens/ProfileScreen'
 import ReconnectScreen from './screens/ReconnectScreen'
 
 const SCREENS = {
@@ -16,6 +17,7 @@ const SCREENS = {
   reunited: () => <FoundTab kind="re" />,
   meet: () => <MeetScreen />,
   newfriends: () => <FoundTab kind="nw" />,
+  profile: () => <ProfileScreen />,
 }
 
 function Loading() {

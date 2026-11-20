@@ -174,15 +174,25 @@ export function StoreProvider({ children }) {
       await load()
     }
   }, [apply, load, toast])
+  const deleteMyData = useCallback(async () => {
+    setOpenState({ re: null, nw: null })
+    setAboutGate(null)
+    try {
+      apply(await api.deleteMe(), { notify: false })
+      toast('All your data was deleted')
+    } catch (e) {
+      toast(e.message)
+    }
+  }, [apply, toast])
   const becomeNew = useCallback(() => reset('new'), [reset])
   const becomeOld = useCallback(() => reset('returning'), [reset])
 
   const value = useMemo(() => ({
     st, loadError, load, busy, toast, toastText, overlay, closeOverlay, person,
     form, setForm, meet, setMeet, open, setOpen, aboutGate, setAboutGate,
-    submitRequest, saveAbout, dismissMoment, removeRequest, sendMessage, becomeNew, becomeOld,
+    submitRequest, saveAbout, deleteMyData, dismissMoment, removeRequest, sendMessage, becomeNew, becomeOld,
   }), [st, loadError, load, busy, toast, toastText, overlay, closeOverlay, person, form, meet, open, setOpen,
-    aboutGate, submitRequest, saveAbout, dismissMoment, removeRequest, sendMessage, becomeNew, becomeOld])
+    aboutGate, submitRequest, saveAbout, deleteMyData, dismissMoment, removeRequest, sendMessage, becomeNew, becomeOld])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

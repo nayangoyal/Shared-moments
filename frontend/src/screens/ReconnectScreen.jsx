@@ -27,7 +27,7 @@ function Field({ f, value, onChange }) {
 
 // Reconnect: describe a lost friend. Submitting saves a private request; matches show up in Reunited.
 export default function ReconnectScreen() {
-  const { form: rf, setForm, submitRequest, setOpen, toast, busy } = useStore()
+  const { st, form: rf, setForm, submitRequest, setOpen, toast, busy } = useStore()
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }))
 
   const n = reconnectScore(rf)
@@ -51,6 +51,11 @@ export default function ReconnectScreen() {
         <Intro title="Who are you looking for?">
           A school friend, an old neighbour, a first-job buddy. Describe them and we'll look out for them. Only you can see this.
         </Intro>
+        {st?.me?.isDemo && (
+          <div className="nudge">
+            <span>You're exploring as the demo user <b>Rahul "Golu"</b>. To find a real friend, <a href="#profile">put your own details in Profile</a> first.</span>
+          </div>
+        )}
         <div className="mainbox formgrid">
           <div className="tip span"><b>Nothing here is required, but the more you fill in, the better your chances of finding them.</b></div>
           {FIELDS.map((f) => <Field key={f.k} f={f} value={rf[f.k]} onChange={set(f.k)} />)}

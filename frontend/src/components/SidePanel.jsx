@@ -37,6 +37,16 @@ const SIDE = {
       <Card title="Stay safe"><p>Everyone with a blue ✓ is verified. Meet first in a public place.</p></Card>
     </>
   ),
+  profile: (
+    <>
+      <Card title="Why your profile matters">
+        <p>Nobody can search for you. A friend finds you only when they describe you and you've described them, so your nicknames, school and areas need to be right.</p>
+      </Card>
+      <Card title="What stays private">
+        <p>Matches see only your name, age and area. Your nicknames, school and memories are used for matching and never shown.</p>
+      </Card>
+    </>
+  ),
   newfriends: (
     <>
       <Card title="About New Friends"><p>Your requests, the people who match them, and the friends you're chatting with.</p></Card>

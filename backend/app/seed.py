@@ -126,7 +126,7 @@ def reset_user(uid: str, persona: str) -> None:
     ensure_seeded()
     wipe(uid)
     if persona == "new":
-        # merge keeps 'rev' increasing and the 'sandbox' flag; None clears a field
+        # merge keeps 'rev' increasing; None clears a field
         users().document(uid).set({"name": "", "age": None, "place": "", "about": None, "about_raw": None,
                                    "phone_hash": None, "color": C[0], "updated": now()}, merge=True)
         bump(uid)

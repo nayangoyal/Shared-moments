@@ -83,16 +83,13 @@ def health():
 
 @app.post("/api/session")
 def session(who: dict = Depends(identity)):
-    """First visit gets the 'returning user' demo state, like the original prototype.
-
-    Anonymous sessions are demo sandboxes: they match the demo people (and later real, phone-verified
-    users), never other sandboxes, so judges using "Fill an example" don't match each other.
-    """
+    """First visit gets the 'returning user' demo state (as Rahul, "Golu"), like the original prototype.
+    The app says so and links to Profile, where people enter their own details to match real friends."""
     uid = who["uid"]
     seed.ensure_seeded()
     if not store.get_user(uid):
         seed.reset_user(uid, "returning")
-    store.users().document(uid).set({"sandbox": who["anonymous"]}, merge=True)
+    store.users().document(uid).set({"anonymous": who["anonymous"]}, merge=True)
     return store.state(uid)
 
 
@@ -111,6 +108,13 @@ def put_me(about: About, bg: BackgroundTasks, uid: str = Depends(current_user)):
     for s in store.active_requests(uid):  # requests waiting on "About me" can match now
         if s.get("kind") == "re":
             bg.add_task(_match, s.id)
+    return store.state(uid)
+
+
+@app.delete("/api/me")
+def delete_me(uid: str = Depends(current_user)):
+    """Delete all my data: requests, matches, chats and About me (the deck's "delete at any time")."""
+    seed.reset_user(uid, "new")
     return store.state(uid)
 
 

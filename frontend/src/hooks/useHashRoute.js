@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export const ROUTES = ['reconnect', 'reunited', 'meet', 'newfriends']
+export const ROUTES = ['reconnect', 'reunited', 'meet', 'newfriends', 'profile']
 
 const read = () => {
   const r = window.location.hash.slice(1)

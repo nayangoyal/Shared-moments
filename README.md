@@ -49,6 +49,12 @@ contact details are removed from free text; the database refuses all direct brow
    St. Stanislaus, 2014", so you match both ways.
 4. Type the name **Riya**: no match, the request waits for her to join.
 5. Meet New → **Fill an example** → matches people who like music and sunsets.
+6. **Two real people:** open the site in two different browsers. In each, tap the round avatar
+   (top right) → **Profile**, replace the demo identity with your own details, then on Reconnect
+   describe the other person. Both see the match within seconds and can chat.
+
+Everyone starts as the demo identity (Rahul, "Golu"). Demo identities only match the demo people,
+so judges using the examples never match each other; anyone with their own details is a real user.
 
 ## Run locally
 

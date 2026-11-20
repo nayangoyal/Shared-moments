@@ -38,6 +38,7 @@ export const api = {
   session: () => call('POST', '/session'),
   state: (rev) => call('GET', '/state' + (rev != null ? `?rev=${rev}` : '')),
   saveAbout: (about) => call('PUT', '/me', about),
+  deleteMe: () => call('DELETE', '/me'),
   createRequest: (kind, data) => call('POST', '/requests', { kind, data }),
   removeRequest: (id) => call('DELETE', `/requests/${id}`),
   dismiss: (matchId) => call('POST', `/matches/${matchId}/dismiss`),

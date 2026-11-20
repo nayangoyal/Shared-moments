@@ -25,7 +25,7 @@ from google.cloud.firestore_v1.vector import Vector
 from . import ai, config
 from .ai import MeetRecord, PersonRecord
 from .clients import db
-from .matching import cosine, fits, score_meet, score_person
+from .matching import cosine, fits, norm, score_meet, score_person
 
 log = logging.getLogger("store")
 
@@ -79,6 +79,16 @@ def bump(*uids: str) -> None:
 def public_card(uid: str, u: dict) -> dict:
     return {"n": u.get("name") or "Someone", "a": u.get("age") or "", "place": u.get("place") or "",
             "c": u.get("color") or color_for(uid), "verified": True}
+
+
+def is_demo_identity(u: dict) -> bool:
+    """True while someone uses the demo identity (Rahul Sharma, "Golu") from "Fill an example".
+
+    Demo identities never match each other, so judges who all tap Fill an example don't see one
+    another. Anyone who enters their own details is treated as a real person.
+    """
+    raw = u.get("about_raw") or {}
+    return norm(raw.get("name", "")) == "rahul sharma" and "golu" in norm(raw.get("nick", ""))
 
 
 def save_about(uid: str, raw: dict) -> dict:
@@ -199,8 +209,8 @@ def _match_reconnect(r: dict, uid: str, me: dict, taken: set[str]) -> list[dict]
         if other not in owners:
             owners[other] = get_user(other)
         them = owners[other]
-        if not them.get("about") or (me.get("sandbox") and them.get("sandbox")):
-            continue  # demo sandboxes (anonymous judges) don't match each other
+        if not them.get("about") or (is_demo_identity(me) and is_demo_identity(them)):
+            continue  # two demo identities (judges using Fill an example) don't match each other
         p1, why_me = score_person(looking, PersonRecord(**them["about"]), r.get("phone_hash"), them.get("phone_hash"))
         p2, why_them = score_person(PersonRecord(**o["rec"]), my_about, o.get("phone_hash"), me.get("phone_hash"))
         if not (fits(p1, why_me, config.FIELD_THRESHOLD) and fits(p2, why_them, config.FIELD_THRESHOLD)):
@@ -247,11 +257,11 @@ def _match_meet(r: dict, uid: str, me: dict, taken: set[str]) -> list[dict]:
         other = o["owner"]
         if other == uid or other in taken or not o.get("rec"):
             continue
-        if me.get("sandbox"):
+        if is_demo_identity(me):
             if other not in owners:
                 owners[other] = get_user(other)
-            if owners[other].get("sandbox"):
-                continue  # demo sandboxes (anonymous judges) don't match each other
+            if is_demo_identity(owners[other]):
+                continue  # two demo identities don't match each other
         theirs = MeetRecord(**o["rec"])
         why_me, why_them = score_meet(mine, theirs), score_meet(theirs, mine)
         if not why_me:
@@ -298,7 +308,8 @@ def messages(ref, uid: str) -> list[dict]:
 # ---------- the whole app state for one user (the frontend's store shape) ----------
 def state(uid: str) -> dict:
     me = get_user(uid)
-    out = {"rev": me.get("rev", 0), "me": {"hasAbout": bool(me.get("about")), "about": me.get("about_raw") or {}},
+    out = {"rev": me.get("rev", 0), "me": {"hasAbout": bool(me.get("about")), "about": me.get("about_raw") or {}, "isDemo": is_demo_identity(me),
+                  "card": public_card(uid, me)},
            "re": {"reqs": [], "moments": [], "chats": []}, "nw": {"reqs": [], "moments": [], "chats": []},
            "msgs": {}, "people": {}}
     reqs = sorted(active_requests(uid), key=lambda s: s.get("created"), reverse=True)
