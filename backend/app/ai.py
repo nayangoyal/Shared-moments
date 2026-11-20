@@ -23,20 +23,20 @@ def _generate(models: list[str], contents: str, cfg: types.GenerateContentConfig
     last = None
     for spec in models:
         loc, model = spec.strip().split("/", 1)
-        this_cfg = cfg
-        for attempt in range(2):
+        this_cfg, attempt = cfg, 0
+        while attempt < 2:
             try:
                 return vertex(loc).models.generate_content(model=model, contents=contents, config=this_cfg)
             except Exception as e:  # noqa: BLE001
                 last = e
                 if "Thinking level is unsupported" in str(e) and this_cfg.thinking_config is not None:
-                    this_cfg = this_cfg.model_copy(update={"thinking_config": None})  # model doesn't take it
-                    continue
-                retryable = any(code in str(e)[:12] for code in ("403", "429", "500", "503"))
-                log.info("gemini %s attempt %d failed: %s", spec, attempt + 1, str(e)[:80])
-                if not retryable:
+                    this_cfg = this_cfg.model_copy(update={"thinking_config": None})  # model doesn't take it:
+                    continue                                                         # retry, not counted
+                attempt += 1
+                log.info("gemini %s attempt %d failed: %s", spec, attempt, str(e)[:80])
+                if not any(code in str(e)[:12] for code in ("403", "429", "500", "503")):
                     break
-                time.sleep(0.4 * (attempt + 1))
+                time.sleep(0.4 * attempt)
     raise last
 
 
