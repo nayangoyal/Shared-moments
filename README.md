@@ -63,6 +63,11 @@ The command prints the public URL. Run the last command again to redeploy after 
 **Live:** https://shared-moments-894074329443.asia-south1.run.app
 (project `shared-moments-2026`, service `shared-moments`, region `asia-south1`)
 
+**Auto-deploy:** pushing to `main` on GitHub redeploys the site. The Cloud Build trigger
+`deploy-frontend` (region `asia-south1`) runs [cloudbuild.yaml](cloudbuild.yaml) whenever
+`frontend/**` or `cloudbuild.yaml` changes: build image → push to Artifact Registry → deploy to
+Cloud Run. It takes about 2–3 minutes; watch it under Cloud Build → History in the console.
+
 On a brand-new project the first build can fail with `PERMISSION_DENIED`. Grant the default
 compute service account the build role once, wait a minute, then deploy again:
 ```bash
