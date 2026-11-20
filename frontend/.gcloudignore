@@ -1,0 +1,5 @@
+# Files not uploaded to Cloud Build (it builds the app itself from source)
+node_modules/
+dist/
+.DS_Store
+*.log

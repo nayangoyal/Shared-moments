@@ -1,0 +1,36 @@
+# Continuous deployment: every push to main builds the frontend and deploys it to Cloud Run.
+# Used by the Cloud Build trigger "deploy-frontend" (GitHub → Cloud Build → Cloud Run).
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: shared-moments
+  _IMAGE: asia-south1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/shared-moments
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}:${SHORT_SHA}", "-t", "${_IMAGE}:latest", "frontend"]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "--all-tags", "${_IMAGE}"]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=256Mi
+      - --max-instances=3
+      - --quiet
+
+images: ["${_IMAGE}:${SHORT_SHA}", "${_IMAGE}:latest"]
+
+options:
+  logging: CLOUD_LOGGING_ONLY

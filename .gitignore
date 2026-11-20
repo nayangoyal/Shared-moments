@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+dist/
+.vite/
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets and local settings (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*-key.json
+service-account*.json
+.claude/settings.local.json
+
+# Runtime data
+backend/data/records.json
+
+# Old attempts kept locally only
+_backup/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
