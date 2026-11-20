@@ -7,7 +7,7 @@ import { Chips, Intro, Meter, TopBar } from '../components/ui'
 
 // Meet New: describe the moment you want. Submitting saves a private request; matches show up in New Friends.
 export default function MeetScreen() {
-  const { meet, setMeet, submitRequest, setOpen, toast } = useStore()
+  const { meet, setMeet, submitRequest, setOpen, toast, busy } = useStore()
   const moreRef = useRef(null)
   const set = (patch) => setMeet((m) => ({ ...m, ...patch }))
 
@@ -18,10 +18,11 @@ export default function MeetScreen() {
 
   const togglePick = (a) => set({ picked: meet.picked.includes(a) ? meet.picked.filter((x) => x !== a) : [...meet.picked, a] })
 
-  const find = () => {
+  const find = async () => {
     if (!meet.picked.length) { toast("Pick at least one thing you'd like to do"); return }
     if (n < MIN_WORDS) { moreRef.current?.focus(); toast(`Please describe it in more detail (at least ${MIN_WORDS} words)`); return }
-    submitRequest('nw', { acts: meet.picked.join(', '), when: meet.when, where: meet.area, desc: meet.text.trim() })
+    const result = await submitRequest('nw', { acts: meet.picked.join(', '), when: meet.when, where: meet.area, desc: meet.text.trim() })
+    if (result !== 'ok') return
     setMeet((m) => ({ ...EMPTY_MEET, area: m.area }))
     setOpen('nw', null)
     go('newfriends')
@@ -56,7 +57,7 @@ export default function MeetScreen() {
             <Meter pct={Math.min(100, Math.round((n / 40) * 100))} level={level} text={text} />
           </div>
           <div className="sticky-go span">
-            <button className="btn main full" type="button" onClick={find}>Find my people</button>
+            <button className="btn main full" type="button" onClick={find} disabled={busy}>{busy ? 'Saving…' : 'Find my people'}</button>
             <button className="link center" type="button"
               onClick={() => set({ picked: [...new Set([...meet.picked, ...EXAMPLE_MEET.acts])], when: EXAMPLE_MEET.when, text: EXAMPLE_MEET.text })}>
               Fill an example

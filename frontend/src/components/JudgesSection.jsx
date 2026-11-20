@@ -28,7 +28,8 @@ export default function JudgesSection() {
             <button className="btn small" type="button" onClick={() => { becomeOld(); go('reunited') }}>A returning user</button>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: 15 }}>
-            On Reconnect, tap <b>Fill an example</b> and send it. About 3 seconds later a match appears. Try the name <b>Riya</b> to see a request that waits.
+            As <b>a new user</b>: on Reconnect, tap <b>Fill an example</b> and send it. You'll be asked about you once: tap <b>Fill an example</b> there too
+            (you're Rahul, "Golu"). Gemini checks that you and Aarav describe each other, and a match appears in a few seconds. Try the name <b>Riya</b> to see a request that waits.
           </p>
         </div>
         <div className="notes">

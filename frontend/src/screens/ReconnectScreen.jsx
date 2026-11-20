@@ -27,16 +27,17 @@ function Field({ f, value, onChange }) {
 
 // Reconnect: describe a lost friend. Submitting saves a private request; matches show up in Reunited.
 export default function ReconnectScreen() {
-  const { form: rf, setForm, submitRequest, setOpen, toast } = useStore()
+  const { form: rf, setForm, submitRequest, setOpen, toast, busy } = useStore()
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }))
 
   const n = reconnectScore(rf)
   const level = n < 4 ? 'low' : n < 7 ? 'mid' : 'high'
   const text = n < 4 ? 'Your chances: low. Add a few more details.' : n < 7 ? 'Your chances: good. A little more helps.' : 'Your chances: great. Lots of detail to go on.'
 
-  const start = () => {
+  const start = async () => {
     if (!Object.values(rf).some((v) => v.trim())) { toast('Fill in at least one thing you remember'); return }
-    submitRequest('re', { ...rf })
+    const result = await submitRequest('re', { ...rf }) // 'about' → the About me screen opens first
+    if (result !== 'ok') return
     setForm(EMPTY_FORM)
     setOpen('re', null)
     go('reunited')
@@ -66,7 +67,7 @@ export default function ReconnectScreen() {
             <Meter pct={Math.round((n / 10) * 100)} level={level} text={text} />
           </div>
           <div className="sticky-go span">
-            <button className="btn main full" type="button" onClick={start}>Start looking</button>
+            <button className="btn main full" type="button" onClick={start} disabled={busy}>{busy ? 'Saving…' : 'Start looking'}</button>
             <button className="link center" type="button" onClick={() => setForm({ ...EXAMPLE_FORM })}>Fill an example</button>
           </div>
         </div>

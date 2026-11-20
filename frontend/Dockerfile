@@ -10,8 +10,9 @@ COPY . .
 RUN bun run build
 
 FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# The API service address; override with --set-env-vars API_HOST=... on Cloud Run
+ENV API_HOST=shared-moments-api-894074329443.asia-south1.run.app
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 # Cloud Run sends traffic to $PORT, which is 8080 by default
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]

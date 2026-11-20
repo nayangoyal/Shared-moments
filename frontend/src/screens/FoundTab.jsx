@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { LABELS, byId } from '../data/data'
+import { LABELS } from '../data/data'
 import { firstName, reqTitle } from '../lib/utils'
 import { useStore } from '../store/StoreContext'
 import { HeartIcon, PairIcon } from '../components/Icons'
@@ -10,16 +10,17 @@ import { Avatar, EmptyState, Intro, Tick, TopBar } from '../components/ui'
 export default function FoundTab({ kind }) {
   const { open } = useStore()
   const o = open[kind]
-  if (o?.type === 'chat') return <ChatView kind={kind} pid={o.id} />
+  if (o?.type === 'chat') return <ChatView kind={kind} matchId={o.id} />
   if (o?.type === 'req') return <RequestView kind={kind} id={o.id} />
   return <Overview kind={kind} />
 }
 
 const title = (kind) => (kind === 're' ? 'Reunited' : 'New Friends')
-const whyText = (why) => why.join(', ').toLowerCase()
+const WHY = { name: 'name', nickname: 'nickname', phone: 'old phone number', school: 'school', year: 'year', area: 'area', memory: 'shared memory' }
+const whyText = (why) => why.map((w) => WHY[w] || w).join(', ').toLowerCase()
 
 function Overview({ kind }) {
-  const { st, setOpen, dismissMoment } = useStore()
+  const { st, setOpen, dismissMoment, person } = useStore()
   const box = st[kind]
   const isRe = kind === 're'
   const meetBtn = <a className="btn main" href="#meet">Meet new people</a>
@@ -37,18 +38,18 @@ function Overview({ kind }) {
             <h3>This might be your moment · {box.moments.length}</h3>
             <div className="grid">
               {box.moments.map((m) => {
-                const p = byId(m.pid)
+                const p = person(m.pid)
                 const r = box.reqs.find((x) => x.id === m.req)
                 return (
-                  <div className="fcard" key={m.pid}>
+                  <div className="fcard" key={m.id}>
                     <div className="ph" style={{ '--c': p.c }}>{p.n[0]}</div>
                     <div className="b">
-                      <b>{p.n}, {p.a}<Tick /></b>
+                      <b>{p.n}{p.a ? `, ${p.a}` : ''}<Tick /></b>
                       <p>{p.place}</p>
-                      <span className="pill ok" style={{ alignSelf: 'flex-start' }}>Matches your {whyText(m.why)}</span>
+                      {m.why.length > 0 && <span className="pill ok" style={{ alignSelf: 'flex-start' }}>Matches your {whyText(m.why)}</span>}
                       {r && <p className="one" style={{ fontSize: 13 }}>For: {reqTitle(kind, r.data)}</p>}
-                      <button className="btn small main" type="button" onClick={() => setOpen(kind, { type: 'chat', id: m.pid })}>Say hi</button>
-                      <button className="link center" type="button" onClick={() => dismissMoment(kind, m.pid)}>Not them</button>
+                      <button className="btn small main" type="button" onClick={() => setOpen(kind, { type: 'chat', id: m.id })}>Say hi</button>
+                      <button className="link center" type="button" onClick={() => dismissMoment(kind, m.id)}>Not them</button>
                     </div>
                   </div>
                 )
@@ -62,12 +63,12 @@ function Overview({ kind }) {
             <h3>{isRe ? 'Reunited' : 'New friends'} · {box.chats.length}</h3>
             <div className="mainbox listbox">
               <div className="list">
-                {box.chats.map((id) => {
-                  const p = byId(id)
-                  const ch = st.msgs[id] || []
+                {box.chats.map((c) => {
+                  const p = person(c.pid)
+                  const ch = st.msgs[c.id] || []
                   const last = ch[ch.length - 1]
                   return (
-                    <button key={id} className="row click" type="button" onClick={() => setOpen(kind, { type: 'chat', id })}>
+                    <button key={c.id} className="row click" type="button" onClick={() => setOpen(kind, { type: 'chat', id: c.id })}>
                       <Avatar color={p.c}>{p.n[0]}</Avatar>
                       <span className="txt">
                         <span className="name">{p.n}<Tick /></span>
@@ -159,47 +160,52 @@ function RequestView({ kind, id }) {
               : "We'll keep matching it with new people who join."}
           </p>
         </div>
-        <button className="link" type="button" onClick={() => { removeRequest(kind, id); back() }}>Remove this request</button>
+        <button className="link" type="button" onClick={async () => { if (await removeRequest(kind, id)) back() }}>Remove this request</button>
       </div>
     </>
   )
 }
 
-function ChatView({ kind, pid }) {
-  const { st, setOpen, sendMessage } = useStore()
+function ChatView({ kind, matchId }) {
+  const { st, setOpen, sendMessage, person } = useStore()
   const [draft, setDraft] = useState('')
   const chatRef = useRef(null)
   const inputRef = useRef(null)
-  const p = byId(pid)
   const box = st[kind]
-  const isMoment = !box.chats.includes(pid)
-  const m = box.moments.find((x) => x.pid === pid)
-  const ch = st.msgs[pid] || []
+  const m = box.moments.find((x) => x.id === matchId)
+  const c = box.chats.find((x) => x.id === matchId)
+  const pid = m?.pid || c?.pid
+  const ch = st.msgs[matchId] || []
+  const back = () => setOpen(kind, null)
 
   // Keep the newest message in view
   useEffect(() => {
-    const c = chatRef.current
-    if (c) c.scrollTop = c.scrollHeight
+    const el = chatRef.current
+    if (el) el.scrollTop = el.scrollHeight
   }, [ch.length])
+  useEffect(() => { if (!pid) back() })
+  if (!pid) return null
 
+  const p = person(pid)
+  const isMoment = Boolean(m)
   const send = (e) => {
     e.preventDefault()
     const v = draft.trim()
     if (!v) return
-    sendMessage(kind, pid, v)
+    sendMessage(kind, matchId, pid, v)
     setDraft('')
     inputRef.current?.focus()
   }
 
   return (
     <>
-      <TopBar title={title(kind)} onBack={() => setOpen(kind, null)} />
+      <TopBar title={title(kind)} onBack={back} />
       <div className="screen">
         <div className="chathead">
           <Avatar color={p.c}>{p.n[0]}</Avatar>
           <div style={{ minWidth: 0 }}>
             <b style={{ fontSize: 20 }}>{p.n}<Tick /></b>
-            <span className="muted" style={{ display: 'block', fontSize: 15 }}>{p.place}{m ? ' · matches your ' + whyText(m.why) : ''}</span>
+            <span className="muted" style={{ display: 'block', fontSize: 15 }}>{p.place}{m?.why?.length ? ' · matches your ' + whyText(m.why) : ''}</span>
           </div>
         </div>
         {isMoment && <div className="tip"><b>This might be your moment.</b> Say hi. They can't see your request, only your message.</div>}
@@ -210,7 +216,7 @@ function ChatView({ kind, pid }) {
         </div>
         <form className="composer" onSubmit={send}>
           <label htmlFor="chatIn" className="sr-only">Message</label>
-          <input ref={inputRef} className="input" id="chatIn" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value)}
+          <input ref={inputRef} className="input" id="chatIn" autoComplete="off" maxLength={1000} value={draft} onChange={(e) => setDraft(e.target.value)}
             placeholder={isMoment ? `Say hi to ${firstName(p)}…` : 'Write a message…'} />
           <button className="btn main" type="submit">Send</button>
         </form>

@@ -6,9 +6,9 @@ export default function Header({ route }) {
   const tabs = [
     { id: 'reconnect', label: 'Reconnect', icon: <SearchIcon /> },
     // badge = possible matches you haven't answered yet
-    { id: 'reunited', label: 'Reunited', icon: <PairIcon />, n: st.re.moments.length },
+    { id: 'reunited', label: 'Reunited', icon: <PairIcon />, n: st?.re.moments.length || 0 },
     { id: 'meet', label: 'Meet New', icon: <PeopleIcon /> },
-    { id: 'newfriends', label: 'New Friends', icon: <HeartIcon />, n: st.nw.moments.length },
+    { id: 'newfriends', label: 'New Friends', icon: <HeartIcon />, n: st?.nw.moments.length || 0 },
   ]
   return (
     <header className="site-head">

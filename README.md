@@ -1,112 +1,95 @@
-# Shared Moments: Buildathon MVP
+# Shared Moments
 
-Find a lost friend from memory fragments. Gemini interviews you, turns the memory into a private
-record, matches it **both ways** against other records, and reveals identities only after the
-secret detail is verified and both say yes.
+**Find anyone you remember, from 20 years ago or 20 minutes ago.** Startup Buildathon India 2026.
 
-```
-React chat ──► FastAPI ──► Gemini Flash  (interview + extract JSON + secret check)
-                     └──► matching.py   (filter: year/city/age → score: nicknames both ways, places, school)
-                     └──► Gemini Pro    (judge: probability + evidence + conflicts + verification Qs)
-```
-
-## Run it (2 terminals)
-
-**1. Backend**
-```bash
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # then paste your key from https://aistudio.google.com/apikey
-uvicorn main:app --reload --port 8000
-```
-
-**2. Frontend**
-```bash
-cd frontend
-bun install                 # or: npm install
-bun run dev                 # or: npm run dev  → open http://localhost:5173
-```
-
-The frontend is the four-tab web app (Reconnect, Reunited, Meet New, New Friends). It runs on
-sample data in the browser (saved in localStorage), so it works without the backend.
-
-```
-frontend/src/
-  main.jsx, App.jsx          entry + page layout (header, screen, help panel, judges notes)
-  styles.css                 all styles (light + dark, mobile layout)
-  data/data.js               sample people, moments, seed state
-  lib/utils.js               friend matching, Meet New queue, form scoring
-  hooks/useHashRoute.js      #reconnect / #reunited / #meet / #newfriends
-  store/StoreContext.jsx     saved state, toast, overlays, sending + "said yes" demo
-  components/                Header, SidePanel, JudgesSection, ProfileCard, Overlays, Toast, ui, Icons
-  screens/                   ReconnectScreen, FoundTab (Reunited + New Friends), MeetScreen
-```
-
-## Deploy the frontend to Cloud Run
-
-`frontend/Dockerfile` builds the app with Bun and serves it with nginx on port 8080.
-Cloud Build builds it in the cloud, so Docker isn't needed locally.
-
-```bash
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
-gcloud run deploy shared-moments \
-  --source frontend --region asia-south1 \
-  --allow-unauthenticated --port 8080 \
-  --memory 256Mi --min-instances 0 --max-instances 3
-```
-
-The command prints the public URL. Run the last command again to redeploy after changes.
+You describe *what you remember* about a lost friend (a nickname, a school, a year, a memory), not
+who they are. Your description stays private. Gemini matches it **both ways**: you only match
+someone who independently described you too, so nobody can be found unless they're also looking.
+The same engine helps you meet new people who want the same moments (a walk, chai, music).
 
 **Live:** https://shared-moments-894074329443.asia-south1.run.app
-(project `shared-moments-2026`, service `shared-moments`, region `asia-south1`)
 
-**Auto-deploy:** pushing to `main` on GitHub redeploys the site. The Cloud Build trigger
-`deploy-frontend` (region `asia-south1`) runs [cloudbuild.yaml](cloudbuild.yaml) whenever
-`frontend/**` or `cloudbuild.yaml` changes: build image → push to Artifact Registry → deploy to
-Cloud Run. It takes about 2–3 minutes; watch it under Cloud Build → History in the console.
+## Built on Google
 
-On a brand-new project the first build can fail with `PERMISSION_DENIED`. Grant the default
-compute service account the build role once, wait a minute, then deploy again:
-```bash
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/run.builder"
+| Product | What it does here |
+|---|---|
+| **Cloud Run** | Two services: `shared-moments` (web app) and `shared-moments-api` (FastAPI) |
+| **Gemini on Vertex AI** (`gemini-3.5-flash`, Mumbai) | Turns forms into clean records (nickname spellings, year ranges, places, Hindi/Hinglish), judges "are these two people remembering each other?", and plays the demo people in chat |
+| **Gemini Embeddings** (`gemini-embedding-001`) | Meaning-based matching of memories and descriptions |
+| **Cloud Firestore** + vector search | Requests, matches, chats; nearest-neighbour search for Meet New |
+| **Firebase Authentication** | Anonymous demo sessions (each judge gets a private sandbox); phone sign-in enabled |
+| **Cloud Build** + GitHub | Push to `main` → tests → build → deploy, for both services |
+| **Artifact Registry, Secret Manager, Cloud Logging, IAM** | Images, the GitHub connection, logs, a least-privilege API service account |
+
+## How matching works
+
+```
+Reconnect form ──► POST /api/requests ──► Gemini: form → clean record   ──► Firestore (private)
+                                          Gemini Embeddings: memory text
+                         background ──►  1. fields, BOTH ways: your description fits how they say
+                                            others knew them, AND theirs fits your "About me"
+                                            (each way needs a name, nickname or old phone number)
+                                         2. meaning: embedding similarity of the two memories
+                                         3. Gemini judge: probability, evidence, conflicts
+                                         ──► match for both people: "This might be your moment"
+Meet New: shared activities in the same city + Firestore vector search on the descriptions.
 ```
 
-## Demo script (the story for the judges)
+Privacy: requests are only ever readable by their owner. A match shows the other person's name,
+age and area, and *why it matched in your own words*. Phone numbers are stored only as a hash;
+contact details are removed from free text; the database refuses all direct browser access.
 
-In the chat, describe this memory (Hinglish is fine):
+## Try the demo
 
-> "2012 ke around Jaipur mein Shastri Nagar park mein, Hanuman mandir ke peeche, roz shaam ko
-> cricket khelte the. Sharma Sir ki tuition bhi saath thi. Uska naam Bunty tha. Mujhe sab Golu
-> bulate the. Hum dono 12 saal ke the. Chintu bhi saath khelta tha."
+1. Open the live site. You start as a **returning user** with a match (Aarav), chats and requests.
+   Say hi to Aarav: he answers in character (Gemini).
+2. In *For the judges*, tap **A new user (empty)**. On Reconnect, tap **Fill an example** →
+   **Start looking**. You're asked about you once: **Fill an example** again (you're Rahul, "Golu").
+3. A few seconds later: *This might be your moment*. Aarav was looking for "Golu from
+   St. Stanislaus, 2014", so you match both ways.
+4. Type the name **Riya**: no match, the request waits for her to join.
+5. Meet New → **Fill an example** → matches people who like music and sunsets.
 
-Secret detail when asked: *"we broke an uncle's window with a six and hid in the temple"*
+## Run locally
 
-What happens:
-1. **Rohit ("Bunty")** comes back with a high probability. Evidence: same park, tuition, nicknames both ways.
-2. **Ankit**, also called "Bunty" in Jaipur in 2012, shows up as a **near-miss** with a low score and
-   conflicts listed (badminton, different school, different age). *This is the safety moment: same
-   nickname and city is not enough.*
-3. Click **Verify**, type the secret detail, and you get the reveal.
-4. Try a wrong secret ("we went to a movie") and nothing is revealed.
+```bash
+# API (needs gcloud signed in to the project)
+cd backend
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
+.venv/bin/python -m pytest -q tests                       # matching unit tests
+LOCAL_ACCESS_TOKEN=$(gcloud auth print-access-token) .venv/bin/uvicorn app.main:app --port 8000
 
-`POST /api/reset` (or "Start over") restores the seed data between demo runs.
+# Web app (Vite forwards /api to :8000)
+cd frontend && bun install && bun run dev                  # http://localhost:5173
+```
 
-## Files
+## Code map
 
-| File | What it does |
-|---|---|
-| `backend/prompts.py` | **All Gemini prompts.** Tune these first. |
-| `backend/gemini_client.py` | Gemini calls with structured JSON output |
-| `backend/matching.py` | Filter + two-way scoring (nickname sound-alikes, place/school overlap) |
-| `backend/main.py` | API: `/interview`, `/finish`, `/verify`, `/consent`, `/reset` |
-| `backend/data/seed.json` | 5 test profiles (1 true match, 1 near-miss, 3 unrelated) |
-| `frontend/src/` | Four-tab web app (see the tree above) |
+```
+backend/app/
+  main.py        API routes (all need a Firebase ID token)
+  store.py       Firestore data + the matching engine
+  matching.py    pure matching rules (sound-alike nicknames, two-way scoring) – unit-tested
+  ai.py          Gemini: extraction, embeddings, judge, in-character replies (each with a fallback)
+  prompts.py     every Gemini instruction in one place
+  seed.py        demo people (each with a hidden About me + request) and the returning-user state
+frontend/src/
+  lib/api.js     Firebase anonymous sign-in + API client
+  store/         app state from the API, polling, "This might be your moment", replies
+  screens/       Reconnect, About you, Meet New, Reunited / New Friends (requests, matches, chat)
+cloudbuild.yaml / cloudbuild.backend.yaml   auto-deploy on push to main
+```
 
-## Privacy rules already in the code
-- The judge never sees the secret detail or real names.
-- The other person's name is only returned by `/consent` after `/verify` passes.
-- The other person's memory text is never sent to the frontend; only evidence summaries are.
+## Deploy
+
+Pushing to `main` deploys automatically (Cloud Build triggers `deploy-frontend` and `deploy-backend`
+in `asia-south1`, about 2–3 minutes; see Cloud Build → History). Manual deploys:
+
+```bash
+gcloud run deploy shared-moments-api --source backend --region asia-south1 \
+  --service-account sm-api@PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --no-cpu-throttling
+gcloud run deploy shared-moments --source frontend --region asia-south1 --allow-unauthenticated
+```
+
+On a brand-new project the first build can fail with `PERMISSION_DENIED`: grant
+`PROJECT_NUMBER-compute@developer.gserviceaccount.com` the `roles/run.builder` role once and retry.
