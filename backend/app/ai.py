@@ -11,7 +11,7 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 from . import config, prompts
-from .clients import embedder, vertex
+from .clients import vertex
 
 log = logging.getLogger("ai")
 
@@ -152,15 +152,17 @@ def extract_meet(d: dict, allowed: list[str]) -> MeetRecord:
 def embed(text: str) -> list[float] | None:
     if not (text or "").strip():
         return None
-    try:
-        resp = embedder().models.embed_content(
-            model=config.EMBED_MODEL, contents=text[:4000],
-            config=types.EmbedContentConfig(output_dimensionality=config.EMBED_DIM, task_type="SEMANTIC_SIMILARITY"),
-        )
-        return list(resp.embeddings[0].values)
-    except Exception as e:  # noqa: BLE001
-        log.warning("embed failed: %s", e)
-        return None
+    for where in config.EMBED_SOURCES:
+        try:
+            resp = vertex(where.strip()).models.embed_content(
+                model=config.EMBED_MODEL, contents=text[:4000],
+                config=types.EmbedContentConfig(output_dimensionality=config.EMBED_DIM, task_type="SEMANTIC_SIMILARITY"),
+            )
+            return list(resp.embeddings[0].values)
+        except Exception as e:  # noqa: BLE001
+            log.info("embed via %s failed: %s", where, str(e)[:80])
+    log.warning("embed failed on every source")
+    return None
 
 
 def judge(a_looking: PersonRecord, b_about: PersonRecord, b_looking: PersonRecord, a_about: PersonRecord,

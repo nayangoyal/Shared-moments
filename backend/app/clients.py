@@ -1,10 +1,16 @@
-"""Google Cloud clients, created once. On Cloud Run they use the service's own identity (no keys)."""
+"""Google Cloud clients, created once. On Cloud Run they use the service's own identity (no keys),
+except the optional Gemini API key (AI Studio), which comes from Secret Manager as GEMINI_API_KEY."""
+import os
 from functools import lru_cache
 
 from google import genai
 from google.cloud import firestore
+from google.genai import types
 
 from . import config
+
+# Every Gemini call gives up after this long, so a stuck call can't stall matching or a reply
+_HTTP = types.HttpOptions(timeout=config.GEMINI_TIMEOUT_MS)
 
 
 def _credentials():
@@ -20,10 +26,15 @@ def db() -> firestore.Client:
 
 
 @lru_cache
-def vertex(location: str) -> genai.Client:
-    """Gemini on Vertex AI for one location (e.g. 'asia-south1' or 'global')."""
-    return genai.Client(vertexai=True, project=config.PROJECT, location=location, credentials=_credentials())
+def gemini_client(where: str) -> genai.Client:
+    """'aistudio' = Gemini API with the key from Secret Manager; anything else = a Vertex AI location."""
+    if where == "aistudio":
+        key = os.getenv("GEMINI_API_KEY")
+        if not key:
+            raise RuntimeError("GEMINI_API_KEY is not set")
+        return genai.Client(api_key=key, http_options=_HTTP)
+    return genai.Client(vertexai=True, project=config.PROJECT, location=where, credentials=_credentials(), http_options=_HTTP)
 
 
-def embedder() -> genai.Client:
-    return vertex(config.EMBED_LOCATION)
+def vertex(where: str) -> genai.Client:  # kept for callers that name a location
+    return gemini_client(where)
