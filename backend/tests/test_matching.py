@@ -86,3 +86,12 @@ def test_nayan_and_manav_match_both_ways_with_their_own_details():
     p2, w2 = score_person(manav_looks, nayan_about)
     assert fits(p1, w1, 4) and fits(p2, w2, 4)
     assert {"name", "school", "year", "area"} <= set(w1)
+
+
+def test_demo_identities_only_match_demo_people():
+    from app.store import keep_apart
+    demo, real = {"about_raw": {"name": "Rahul Sharma", "nick": "Golu"}}, {"about_raw": {"name": "Nayan Goyal"}}
+    assert keep_apart("u1", demo, "u2", demo)          # two judges
+    assert keep_apart("u1", demo, "u2", real)          # judge vs real person
+    assert not keep_apart("u1", demo, "seed-aarav", {})  # judge vs demo person: allowed
+    assert not keep_apart("u1", real, "u2", real)      # two real people: allowed

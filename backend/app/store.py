@@ -91,6 +91,13 @@ def is_demo_identity(u: dict) -> bool:
     return norm(raw.get("name", "")) == "rahul sharma" and "golu" in norm(raw.get("nick", ""))
 
 
+def keep_apart(uid_a: str, a: dict, uid_b: str, b: dict) -> bool:
+    """Demo identities only ever match the built-in demo people, never other users (real or demo)."""
+    if uid_a.startswith("seed-") or uid_b.startswith("seed-"):
+        return False
+    return is_demo_identity(a) or is_demo_identity(b)
+
+
 def save_about(uid: str, raw: dict) -> dict:
     raw = {k: str(v).strip()[:300] for k, v in raw.items() if k in
            {"name", "age", "place", "nick", "school", "year", "area"}}
@@ -209,8 +216,8 @@ def _match_reconnect(r: dict, uid: str, me: dict, taken: set[str]) -> list[dict]
         if other not in owners:
             owners[other] = get_user(other)
         them = owners[other]
-        if not them.get("about") or (is_demo_identity(me) and is_demo_identity(them)):
-            continue  # two demo identities (judges using Fill an example) don't match each other
+        if not them.get("about") or keep_apart(uid, me, other, them):
+            continue  # demo identities only match the demo people
         p1, why_me = score_person(looking, PersonRecord(**them["about"]), r.get("phone_hash"), them.get("phone_hash"))
         p2, why_them = score_person(PersonRecord(**o["rec"]), my_about, o.get("phone_hash"), me.get("phone_hash"))
         if not (fits(p1, why_me, config.FIELD_THRESHOLD) and fits(p2, why_them, config.FIELD_THRESHOLD)):
@@ -257,11 +264,10 @@ def _match_meet(r: dict, uid: str, me: dict, taken: set[str]) -> list[dict]:
         other = o["owner"]
         if other == uid or other in taken or not o.get("rec"):
             continue
-        if is_demo_identity(me):
-            if other not in owners:
-                owners[other] = get_user(other)
-            if is_demo_identity(owners[other]):
-                continue  # two demo identities don't match each other
+        if other not in owners:
+            owners[other] = get_user(other)
+        if keep_apart(uid, me, other, owners[other]):
+            continue  # demo identities only match the demo people
         theirs = MeetRecord(**o["rec"])
         why_me, why_them = score_meet(mine, theirs), score_meet(theirs, mine)
         if not why_me:
